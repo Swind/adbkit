@@ -1,5 +1,3 @@
-Monkey = require 'adbkit-monkey'
-Logcat = require 'adbkit-logcat'
 Promise = require 'bluebird'
 debug = require('debug')('adb:client')
 
@@ -26,9 +24,7 @@ InstallCommand = require './command/host-transport/install'
 IsInstalledCommand = require './command/host-transport/isinstalled'
 ListReversesCommand = require './command/host-transport/listreverses'
 LocalCommand = require './command/host-transport/local'
-LogcatCommand = require './command/host-transport/logcat'
 LogCommand = require './command/host-transport/log'
-MonkeyCommand = require './command/host-transport/monkey'
 RebootCommand = require './command/host-transport/reboot'
 RemountCommand = require './command/host-transport/remount'
 RootCommand = require './command/host-transport/root'
@@ -297,48 +293,6 @@ class Client
       .then (transport) ->
         new TcpCommand transport
           .execute port, host
-      .nodeify callback
-
-  openMonkey: (serial, port = 1080, callback) ->
-    if typeof port is 'function'
-      callback = port
-      port = 1080
-    tryConnect = (times) =>
-      this.openTcp serial, port
-        .then (stream) ->
-          Monkey.connectStream stream
-        .catch (err) ->
-          if times -= 1
-            debug "Monkey can't be reached, trying #{times} more times"
-            Promise.delay 100
-              .then ->
-                tryConnect times
-          else
-            throw err
-    tryConnect 1
-      .catch (err) =>
-        this.transport serial
-          .then (transport) ->
-            new MonkeyCommand transport
-              .execute port
-          .then (out) ->
-            tryConnect 20
-              .then (monkey) ->
-                monkey.once 'end', ->
-                  out.end()
-      .nodeify callback
-
-  openLogcat: (serial, options, callback) ->
-    if typeof options is 'function'
-      callback = options
-      options = {}
-    this.transport serial
-      .then (transport) ->
-        new LogcatCommand transport
-          .execute options
-      .then (stream) ->
-        Logcat.readStream stream,
-          fixLineFeeds: false
       .nodeify callback
 
   openProcStat: (serial, callback) ->
